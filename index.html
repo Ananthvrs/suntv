@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sun TV HD - Web Player</title>
+    <!-- HLS.js Player Library -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body {
+            margin: 0;
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .header {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            color: #ff9900;
+        }
+        .player-container {
+            width: 90%;
+            max-width: 800px;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+        }
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+            aspect-ratio: 16/9;
+        }
+        .status {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Sun TV HD Live</h1>
+        <div class="status" id="status">Connecting to stream...</div>
+    </div>
+
+    <div class="player-container">
+        <video id="videoPlayer" controls autoplay></video>
+    </div>
+
+    <script>
+        // M3U ஃபைலில் இருந்து பெறப்பட்ட Sun TV HD ஸ்ட்ரீமிங் லிங்க்
+        var videoSrc = 'https://live-suntv-en.zedge.net/suntv/manifest.m3u8'; // பொதுவான மூலங்களின்படி அல்லது பிளேலிஸ்ட் லிங்க்
+        var video = document.getElementById('videoPlayer');
+        var statusText = document.getElementById('status');
+
+        if (Hls.isSupported()) {
+            var hls = new Hls();
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                statusText.innerText = "Playing Live: Sun TV HD";
+                video.play();
+            });
+            hls.on(Hls.Events.ERROR, function(event, data) {
+                statusText.innerText = "Stream error or offline. Link may have expired.";
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = videoSrc;
+            video.addEventListener('loadedmetadata', function() {
+                statusText.innerText = "Playing Live: Sun TV HD";
+                video.play();
+            });
+        } else {
+            statusText.innerText = "Your browser does not support HLS streaming.";
+        }
+    </script>
+
+</body>
+</html>
