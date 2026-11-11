@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cable TV IPTV Player</title>
-    <!-- Hls.js லைப்ரரி -->
+    <title>Cable Box IPTV Player</title>
+    <!-- Hls.js லைப்ரரி (HLS Streams டிவி பிரவுசரில் சீராக இயங்க) -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         * {
@@ -24,6 +24,7 @@
             color: #fff;
         }
 
+        /* முழுத்திரை வீடியோ */
         #video-container {
             position: absolute;
             top: 0;
@@ -40,12 +41,12 @@
             object-fit: contain;
         }
 
-        /* மேல் வலது மூலையில் உள்ள சேனல் எண் */
+        /* வலது மேல் மூலையில் தோன்றும் சேனல் எண் (Digital Cable Box Style) */
         #channel-num-badge {
             position: absolute;
             top: 30px;
             right: 40px;
-            font-size: 50px;
+            font-size: 52px;
             font-weight: 800;
             color: #00ff66;
             text-shadow: 2px 2px 8px #000;
@@ -53,7 +54,7 @@
             display: none;
         }
 
-        /* OSD Info Bar (Cable TV Style) */
+        /* கேபிள் டிவி இன்ஃபோ பார் (Bottom OSD Banner) */
         #info-banner {
             position: absolute;
             bottom: 30px;
@@ -112,6 +113,7 @@
             font-size: 26px;
             font-weight: bold;
             color: #fff;
+            letter-spacing: 0.5px;
         }
 
         .banner-sub {
@@ -125,4 +127,339 @@
             font-size: 28px;
             font-weight: 700;
             color: #f7fafc;
-            border-left: 2px solid rgba(255,255,25
+            letter-spacing: 1px;
+            border-left: 2px solid rgba(255,255,255,0.2);
+            padding-left: 25px;
+        }
+
+        /* சேனல் வழிகாட்டி / EPG பட்டியல் (Side Menu) */
+        #channel-list-menu {
+            position: absolute;
+            top: 0;
+            left: -400px;
+            width: 380px;
+            height: 100%;
+            background: rgba(10, 16, 26, 0.95);
+            backdrop-filter: blur(8px);
+            z-index: 20;
+            transition: left 0.3s ease;
+            box-shadow: 10px 0 30px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #channel-list-menu.open {
+            left: 0;
+        }
+
+        .menu-header {
+            padding: 25px 20px;
+            background: #00d2ff;
+            color: #050b14;
+            font-size: 22px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .channel-items {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        .channel-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.15s;
+        }
+
+        .channel-item.selected, .channel-item:hover {
+            background: linear-gradient(90deg, rgba(0, 210, 255, 0.4), rgba(0, 210, 255, 0.05));
+            border-left: 5px solid #00d2ff;
+        }
+
+        .channel-item.playing {
+            color: #00ff66;
+        }
+
+        .item-num {
+            width: 45px;
+            font-weight: bold;
+            font-size: 18px;
+            color: #718096;
+        }
+
+        .channel-item.selected .item-num {
+            color: #fff;
+        }
+
+        .item-name {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        /* லோடிங் சுழற்சி (Buffering Spinner) */
+        #loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 5px solid rgba(255,255,255,0.2);
+            border-top: 5px solid #00d2ff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 0.8s linear infinite;
+            z-index: 5;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="video-container">
+        <video id="tv-video" autoplay playsinline></video>
+        <div id="loader"></div>
+    </div>
+
+    <!-- Right Top Channel Number -->
+    <div id="channel-num-badge">CH 001</div>
+
+    <!-- Cable Style OSD Info Bar -->
+    <div id="info-banner">
+        <img id="b-logo" class="banner-logo" src="" alt="logo" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\' viewBox=\'0 0 24 24\' fill=\'%23fff\'><path d=\'M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z\'/></svg>'">
+        <div class="banner-details">
+            <div class="banner-top">
+                <span id="b-num" class="ch-number">CH 1</span>
+                <span id="b-name" class="ch-name">சேனல் பெயர்</span>
+            </div>
+            <div class="banner-sub">
+                <span id="b-group">Tamil Local</span>
+                <span>• Live Digital Broadcast</span>
+            </div>
+        </div>
+        <div id="b-time" class="banner-time">00:00 PM</div>
+    </div>
+
+    <!-- Cable OSD Guide / Side Menu -->
+    <div id="channel-list-menu">
+        <div class="menu-header">
+            <span>சேனல் பட்டியல்</span>
+            <span style="font-size: 14px; align-self: center;">[▲/▼/OK]</span>
+        </div>
+        <div id="channel-items" class="channel-items"></div>
+    </div>
+
+    <script>
+        // சேனல் தரவு (Cleaned working playlist)
+        const channels = [
+            { id: 1, name: "Sana TV", group: "Tamil Local", logo: "https://raw.githubusercontent.com/amazeyourself/tamil-local-iptv/main/logos/SanaTV.svg", url: "https://stream.ottlive.co.in/sanatv/index.m3u8?origin=github.com/amazeyourself" },
+            { id: 2, name: "Sana Plus", group: "Music", logo: "https://jiotvimages.cdn.jio.com/dare_images/images/sanaplus.png", url: "https://stream.ottlive.co.in/sanaplus/index.m3u8?origin=github.com/amazeyourself" },
+            { id: 3, name: "Ultimate TV HD", group: "Tamil Local", logo: "https://jiotvimages.cdn.jio.com/dare_images/images/utvtamil.png", url: "https://stream.ottlive.co.in/utvtamil/index.m3u8?origin=github.com/amazeyourself" },
+            { id: 4, name: "Rock TV HD", group: "Tamil Local", logo: "https://jiotvimages.cdn.jio.com/dare_images/images/suriyantvtamil.png", url: "https://stream.ottlive.co.in/suriyantvtamil/index.m3u8?origin=github.com/amazeyourself" },
+            { id: 5, name: "Roja TV", group: "Tamil Local", logo: "https://jiotvimages.cdn.jio.com/dare_images/images/rojatv.png", url: "https://hls.rojatv.cloud/rojatv/rojatv/index.m3u8?origin=github.com/amazeyourself" },
+            { id: 6, name: "Roja Movies", group: "Movies", logo: "https://jiotvimages.cdn.jio.com/dare_images/images/rojamovies.png", url: "https://hls.rojatv.cloud/rojamovies/rojamovies/index.m3u8?origin=github.com/amazeyourself" },
+            { id: 7, name: "Aaryaa TV", group: "Music", logo: "https://jiotvimages.cdn.jio.com/dare_images/images/aryatvtamil.png", url: "https://stream.ottlive.co.in/aryatvtamil/index.m3u8?origin=github.com/amazeyourself" },
+            { id: 8, name: "Dharsan TV (பக்தி)", group: "Hindu Devotional", logo: "https://livetv.ashokadigital.net/upload/logo/1791256883_WhatsApp%20Image%202026-10-06%20at%208.42.31%20AM.jpeg", url: "https://cable91tataplay.akamaized.net/live/dharshantv/index.m3u8?origin=github.com/amazeyourself" },
+            { id: 9, name: "Nijam TV (பக்தி)", group: "Christian Devotional", logo: "https://tamiltvchannels.com/img/devotional/Nijam%20TV.png", url: "https://nijamtv.nijamtv.org/live/nijamtv/index.m3u8?origin=github.com/amazeyourself" },
+            { id: 10, name: "Aalaya TV", group: "Hindu Devotional", logo: "https://api.nellaiiptv.com/public/uploads/channel/logos/1788356009.webp", url: "https://rtmp.applelive.in/aalayatv/aalayatv/index.m3u8?origin=github.com/amazeyourself" },
+            { id: 11, name: "Kumari TV", group: "Tamil Local", logo: "https://play-lh.googleusercontent.com/5BbVPm_jHSHPVY3XLhfYjpJJtXi1qVV3jlJ9i-cTE0gckC_LSEBKftLgU6uX_UMXgQ", url: "https://applelive.in/kumaritv/gvkumaritv/index.m3u8?origin=github.com/amazeyourself" },
+            { id: 12, name: "Time TV", group: "Tamil Local", logo: "https://raw.githubusercontent.com/amazeyourself/tamil-local-iptv/main/logos/TimeTV.svg", url: "https://live.olidigital.in/timetv/timetv/index.m3u8?origin=github.com/amazeyourself" },
+            { id: 13, name: "Sun Smart TV", group: "Tamil Local", logo: "https://raw.githubusercontent.com/amazeyourself/tamil-local-iptv/main/logos/SunSmartTV.png", url: "https://sunsmart.ipcloud.live/sunsmarttv/sunsmarttv/index.m3u8?origin=github.com/amazeyourself" }
+        ];
+
+        let currentIndex = 0;
+        let isMenuOpen = false;
+        let menuCursorIndex = 0;
+        let bannerTimer = null;
+        let numInputTimer = null;
+        let typedChannelNumber = "";
+
+        const video = document.getElementById('tv-video');
+        const hls = new Hls({ enableWorker: true });
+        const banner = document.getElementById('info-banner');
+        const channelBadge = document.getElementById('channel-num-badge');
+        const sideMenu = document.getElementById('channel-list-menu');
+        const channelListContainer = document.getElementById('channel-items');
+        const loader = document.getElementById('loader');
+
+        // கிளிக் லிஸ்ட் உருவாக்குதல்
+        function buildChannelList() {
+            channelListContainer.innerHTML = '';
+            channels.forEach((ch, idx) => {
+                const el = document.createElement('div');
+                el.className = `channel-item ${idx === currentIndex ? 'playing' : ''}`;
+                el.id = `ch-item-${idx}`;
+                el.innerHTML = `
+                    <span class="item-num">${String(ch.id).padStart(3, '0')}</span>
+                    <span class="item-name">${ch.name}</span>
+                `;
+                el.onclick = () => {
+                    changeChannel(idx);
+                    toggleMenu(false);
+                };
+                channelListContainer.appendChild(el);
+            });
+        }
+
+        // சேனலை மாற்றி பிளே செய்யும் செயல்முறை
+        function changeChannel(index) {
+            if (index < 0) index = channels.length - 1;
+            if (index >= channels.length) index = 0;
+
+            currentIndex = index;
+            const current = channels[currentIndex];
+
+            loader.style.display = 'block';
+
+            if (Hls.isSupported()) {
+                hls.loadSource(current.url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.play().catch(() => {});
+                    loader.style.display = 'none';
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = current.url;
+                video.addEventListener('loadedmetadata', () => {
+                    video.play().catch(() => {});
+                    loader.style.display = 'none';
+                });
+            }
+
+            showInfoBanner();
+            updateMenuFocus();
+        }
+
+        // OSD Banner காட்சிப்படுத்துதல்
+        function showInfoBanner() {
+            const ch = channels[currentIndex];
+            document.getElementById('b-num').innerText = `CH ${String(ch.id).padStart(3, '0')}`;
+            document.getElementById('b-name').innerText = ch.name;
+            document.getElementById('b-group').innerText = ch.group;
+            document.getElementById('b-logo').src = ch.logo;
+
+            // நேரம்
+            const now = new Date();
+            document.getElementById('b-time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            banner.classList.add('show');
+            channelBadge.innerText = `CH ${String(ch.id).padStart(3, '0')}`;
+            channelBadge.style.display = 'block';
+
+            clearTimeout(bannerTimer);
+            bannerTimer = setTimeout(() => {
+                banner.classList.remove('show');
+                channelBadge.style.display = 'none';
+            }, 4000);
+        }
+
+        // மெனுவை ஆன்/ஆஃப் செய்தல்
+        function toggleMenu(forceState) {
+            isMenuOpen = forceState !== undefined ? forceState : !isMenuOpen;
+            if (isMenuOpen) {
+                menuCursorIndex = currentIndex;
+                sideMenu.classList.add('open');
+                updateMenuFocus();
+            } else {
+                sideMenu.classList.remove('open');
+            }
+        }
+
+        function updateMenuFocus() {
+            document.querySelectorAll('.channel-item').forEach((item, idx) => {
+                item.classList.toggle('selected', idx === menuCursorIndex);
+                item.classList.toggle('playing', idx === currentIndex);
+            });
+
+            const activeItem = document.getElementById(`ch-item-${menuCursorIndex}`);
+            if (activeItem) {
+                activeItem.scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        // எண் பட்டன்கள் அழுத்தும் போது (Ex: Press '1' '2' for Channel 12)
+        function handleNumberInput(digit) {
+            typedChannelNumber += digit;
+            channelBadge.innerText = `CH ${typedChannelNumber}_`;
+            channelBadge.style.display = 'block';
+
+            clearTimeout(numInputTimer);
+            numInputTimer = setTimeout(() => {
+                const targetNumber = parseInt(typedChannelNumber);
+                const targetIdx = channels.findIndex(c => c.id === targetNumber);
+                if (targetIdx !== -1) {
+                    changeChannel(targetIdx);
+                }
+                typedChannelNumber = "";
+            }, 2000);
+        }
+
+        // ஆண்ட்ராய்டு டிவி ரிமோட் கண்ட்ரோல் கையாளுதல் (D-Pad & Keyboard Keys)
+        window.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case "ArrowUp": // சேனல் அப் / மெனு மேலே
+                    if (isMenuOpen) {
+                        menuCursorIndex = (menuCursorIndex - 1 + channels.length) % channels.length;
+                        updateMenuFocus();
+                    } else {
+                        changeChannel(currentIndex - 1);
+                    }
+                    e.preventDefault();
+                    break;
+
+                case "ArrowDown": // சேனல் டவுன் / மெனு கீழே
+                    if (isMenuOpen) {
+                        menuCursorIndex = (menuCursorIndex + 1) % channels.length;
+                        updateMenuFocus();
+                    } else {
+                        changeChannel(currentIndex + 1);
+                    }
+                    e.preventDefault();
+                    break;
+
+                case "Enter": // OK பட்டன்
+                    if (isMenuOpen) {
+                        changeChannel(menuCursorIndex);
+                        toggleMenu(false);
+                    } else {
+                        toggleMenu(true);
+                    }
+                    e.preventDefault();
+                    break;
+
+                case "Back":
+                case "Escape": // Back பட்டன்
+                    if (isMenuOpen) {
+                        toggleMenu(false);
+                        e.preventDefault();
+                    }
+                    break;
+
+                default:
+                    // 0-9 எண் பட்டன்கள்
+                    if (e.key >= '0' && e.key <= '9') {
+                        handleNumberInput(e.key);
+                    }
+                    break;
+            }
+        });
+
+        // தொடக்கம் (Startup)
+        window.onload = () => {
+            buildChannelList();
+            changeChannel(0); // முதல் சேனலை தானாக பிளே செய்ய
+        };
+    </script>
+</body>
+</html>
